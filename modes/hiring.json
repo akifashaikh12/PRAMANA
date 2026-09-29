@@ -1,0 +1,15 @@
+{
+  "mode": "hiring",
+  "name": "Candidate Reference & Work Verification",
+  "description": "Role-focused verification emphasizing timeline continuity, project ownership, and factual claims without automated hiring verdicts.",
+  "time_precision": "day",
+  "tone": "professional_inquisitive",
+  "required_slots": ["who", "what", "time_start"],
+  "outputs": ["role_continuity", "ownership_attribution", "internal_inconsistencies"],
+  "guardrails": {
+    "job_relevant_only": true,
+    "no_automated_hire_scoring": true,
+    "detect_internal_inconsistencies": true,
+    "probe_unsupported_scope": true
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "case": {
+    "id": "f8c210d3-99b2-4c33-91cc-788e2301ba33",
+    "mode": "diary",
+    "title": "1994 Summer Lake Trip Recollection",
+    "created_at": "2024-05-10T08:00:00.000Z"
+  },
+  "statements": [
+    {
+      "id": "st-diary-001",
+      "case_id": "f8c210d3-99b2-4c33-91cc-788e2301ba33",
+      "narrator": "Maya Lin",
+      "body": "We went to the lake cabin in July 1994. I clearly remember Mom teaching me how to fish on the wooden dock under the warm morning sun. The water was completely still.",
+      "statement_date": "2024-05-10T09:00:00.000Z",
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "440b7d6ff2bd0d5915e9078cbf88e4c1d905353108639bcc89249baeafb97b70",
+      "created_at": "2024-05-10T09:00:00.000Z"
+    },
+    {
+      "id": "st-diary-002",
+      "case_id": "f8c210d3-99b2-4c33-91cc-788e2301ba33",
+      "narrator": "David Lin (Brother)",
+      "body": "In July 1994, Mom was working in the city that whole week. It was Uncle George who took us out in the rowboat on the lake and taught Maya how to cast the reel.",
+      "statement_date": "2024-05-11T14:30:00.000Z",
+      "prev_hash": "440b7d6ff2bd0d5915e9078cbf88e4c1d905353108639bcc89249baeafb97b70",
+      "hash": "f42d7f754806fcef53c32fbf4c800c5af2f70d32cf193255d2f93727fe66b473",
+      "created_at": "2024-05-11T14:30:00.000Z"
+    }
+  ],
+  "claims": [
+    {
+      "id": "cl-diary-001",
+      "statement_id": "st-diary-001",
+      "source_quote": "Mom teaching me how to fish on the wooden dock under the warm morning sun.",
+      "who": "Mom & Maya",
+      "what": "Fishing lesson on dock",
+      "place": "Lake Cabin Wooden Dock",
+      "time_expression": "July 1994 morning",
+      "time_start": "1994-07-15T09:00:00.000Z",
+      "status": "disputed",
+      "unknown_slots": []
+    },
+    {
+      "id": "cl-diary-002",
+      "statement_id": "st-diary-002",
+      "source_quote": "It was Uncle George who took us out in the rowboat on the lake and taught Maya how to cast the reel.",
+      "who": "Uncle George & Maya",
+      "what": "Fishing lesson from rowboat",
+      "place": "Rowboat on lake",
+      "time_expression": "July 1994",
+      "time_start": "1994-07-15T14:00:00.000Z",
+      "status": "disputed",
+      "unknown_slots": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-diary-001",
+      "case_id": "f8c210d3-99b2-4c33-91cc-788e2301ba33",
+      "kind": "family_photograph",
+      "description": "Polaroid labeled 'Lake George, July 16, 1994' showing Uncle George smiling next to Maya holding a small perch by the boat slip.",
+      "place": "Lake George Boat Slip",
+      "timestamp": "1994-07-16T15:00:00.000Z",
+      "source": "Family Photo Album #3"
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-diary-001",
+      "case_id": "f8c210d3-99b2-4c33-91cc-788e2301ba33",
+      "type": "statement_dispute",
+      "claim_id": "cl-diary-001",
+      "evidence_id": "ev-diary-001",
+      "status": "open",
+      "explanation": "Subjective memory divergence: Maya remembers Mom teaching her to fish on the dock, whereas David recalls Uncle George in the rowboat. Polaroid confirms Uncle George was present on the lake; preserved as parallel subjective perspectives without declaring a winner."
+    }
+  ],
+  "coachQuestion": {
+    "question": "What other details do you remember about the days spent around the cabin during that July trip?",
+    "reason": "Gently invite shared memories and associative context while honoring both family perspectives.",
+    "priority": "low",
+    "target_slot": "what"
+  }
+}

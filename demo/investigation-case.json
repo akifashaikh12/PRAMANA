@@ -1,0 +1,136 @@
+{
+  "case": {
+    "id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+    "mode": "investigation",
+    "title": "Meridian Vault & Server Intrusion",
+    "created_at": "2024-06-12T13:30:00.000Z"
+  },
+  "statements": [
+    {
+      "id": "st-001",
+      "case_id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+      "narrator": "Marcus Vance",
+      "body": "I arrived at the headquarters at 1:45 PM. I stayed in the first-floor main lobby having coffee until 2:30 PM. I never went near the basement or the server vault. Later that evening around 6:00 PM, I met Sarah for dinner across town.",
+      "statement_date": "2024-06-12T13:45:00.000Z",
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "d75fde2bb7c85b8a569ea70259ab1e9be01af78df7b511e609e77a25c27bb78f",
+      "created_at": "2024-06-12T13:45:00.000Z"
+    },
+    {
+      "id": "st-002",
+      "case_id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+      "narrator": "Security Officer Jenkins",
+      "body": "At 2:02 PM, I conducted a physical inspection of the north wing. The corridor was quiet, but the server room security light blinked red.",
+      "statement_date": "2024-06-12T14:15:00.000Z",
+      "prev_hash": "d75fde2bb7c85b8a569ea70259ab1e9be01af78df7b511e609e77a25c27bb78f",
+      "hash": "3e495c0cde5437d58105b507e917e05de9416d2d01497d36e8c621c1cbf01b23",
+      "created_at": "2024-06-12T14:15:00.000Z"
+    }
+  ],
+  "claims": [
+    {
+      "id": "cl-001",
+      "statement_id": "st-001",
+      "source_quote": "I arrived at the headquarters at 1:45 PM.",
+      "who": "Marcus Vance",
+      "what": "Arrived at headquarters",
+      "place": "Headquarters Main Gate",
+      "time_expression": "1:45 PM",
+      "time_start": "2024-06-12T13:45:00.000Z",
+      "status": "verified",
+      "unknown_slots": []
+    },
+    {
+      "id": "cl-002",
+      "statement_id": "st-001",
+      "source_quote": "I stayed in the first-floor main lobby having coffee until 2:30 PM.",
+      "who": "Marcus Vance",
+      "what": "Stayed in lobby drinking coffee",
+      "place": "First-Floor Main Lobby",
+      "time_expression": "until 2:30 PM",
+      "time_start": "2024-06-12T14:00:00.000Z",
+      "time_end": "2024-06-12T14:30:00.000Z",
+      "status": "disputed",
+      "unknown_slots": []
+    },
+    {
+      "id": "cl-003",
+      "statement_id": "st-001",
+      "source_quote": "I never went near the basement or the server vault.",
+      "who": "Marcus Vance",
+      "what": "Denied being near basement or server vault",
+      "place": "Basement Server Vault",
+      "time_expression": "afternoon",
+      "time_start": "2024-06-12T14:00:00.000Z",
+      "status": "disputed",
+      "unknown_slots": []
+    },
+    {
+      "id": "cl-004",
+      "statement_id": "st-001",
+      "source_quote": "Later that evening around 6:00 PM, I met Sarah for dinner across town.",
+      "who": "Marcus Vance",
+      "what": "Met Sarah for dinner",
+      "place": "Restaurant across town",
+      "time_expression": "around 6:00 PM",
+      "time_start": "2024-06-12T18:00:00.000Z",
+      "status": "verified",
+      "unknown_slots": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-001",
+      "case_id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+      "kind": "badge_swipe",
+      "description": "Keycard badge swipe #4409 (Marcus Vance) registered at Basement Server Vault Entry Door",
+      "place": "Basement Server Vault",
+      "timestamp": "2024-06-12T14:02:14.000Z",
+      "source": "Access Control System v4"
+    },
+    {
+      "id": "ev-002",
+      "case_id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+      "kind": "cctv_log",
+      "description": "Camera 04 feed: individual wearing dark trench coat exiting basement stairwell towards north parking",
+      "place": "Basement Stairwell",
+      "timestamp": "2024-06-12T14:18:22.000Z",
+      "source": "Facility CCTV Security Desk"
+    },
+    {
+      "id": "ev-003",
+      "case_id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+      "kind": "wifi_telemetry",
+      "description": "Device MAC 8A:33:F1:09 authenticated to North Express Tollway Access Point",
+      "place": "North Express Toll Plaza",
+      "timestamp": "2024-06-12T17:42:00.000Z",
+      "source": "State Highway Automated Tollway"
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-001",
+      "case_id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+      "type": "location_conflict",
+      "claim_id": "cl-002",
+      "evidence_id": "ev-001",
+      "status": "open",
+      "explanation": "Location conflict: Marcus Vance claims he stayed in First-Floor Main Lobby until 2:30 PM, but verified keycard access log (ev-001) records badge #4409 swiped at Basement Server Vault at 14:02:14 (2 minutes after 14:00)."
+    },
+    {
+      "id": "f-002",
+      "case_id": "c7a840e1-45f8-4e89-980b-741a3bc89101",
+      "type": "timeline_gap",
+      "claim_id": "cl-002",
+      "evidence_id": "ev-003",
+      "status": "open",
+      "explanation": "Unaccounted timeline gap of 3h 12m detected between lobby departure/stairwell footage (14:18) and tollway entry (17:42). No recorded alibis, witnesses, or telemetric logs for this window."
+    }
+  ],
+  "coachQuestion": {
+    "question": "What, if anything, can you describe regarding your activities and movements between 2:15 PM and 5:30 PM on June 12th?",
+    "reason": "Directly probe the critical 3-hour unaccounted timeline gap and the basement transition without asking leading questions about the keycard swipe.",
+    "priority": "high",
+    "target_slot": "time_start"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "case": {
+    "id": "h5b190f2-78d1-4a22-83bc-699e1201fa22",
+    "mode": "hiring",
+    "title": "Principal Architect Reference Verification",
+    "created_at": "2024-02-15T09:00:00.000Z"
+  },
+  "statements": [
+    {
+      "id": "st-hire-001",
+      "case_id": "h5b190f2-78d1-4a22-83bc-699e1201fa22",
+      "narrator": "Elena Rostova",
+      "body": "I served as Principal Distributed Systems Architect at Nexus Corp from March 2021 to December 2023. During this tenure, I independently designed and executed the 100k QPS low-latency ledger migration. Prior to that, I left my previous employer in January 2021.",
+      "statement_date": "2024-02-15T10:00:00.000Z",
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "5d916d3653f81d93d72f052d4052d893bbc4d63cc2007d3ae472ade346e3109a",
+      "created_at": "2024-02-15T10:00:00.000Z"
+    }
+  ],
+  "claims": [
+    {
+      "id": "cl-hire-001",
+      "statement_id": "st-hire-001",
+      "source_quote": "I served as Principal Distributed Systems Architect at Nexus Corp from March 2021 to December 2023.",
+      "who": "Elena Rostova",
+      "what": "Employed as Principal Distributed Systems Architect",
+      "place": "Nexus Corp",
+      "time_expression": "March 2021 to December 2023",
+      "time_start": "2021-03-01T00:00:00.000Z",
+      "time_end": "2023-12-31T23:59:59.000Z",
+      "status": "verified",
+      "unknown_slots": []
+    },
+    {
+      "id": "cl-hire-002",
+      "statement_id": "st-hire-001",
+      "source_quote": "During this tenure, I independently designed and executed the 100k QPS low-latency ledger migration.",
+      "who": "Elena Rostova",
+      "what": "Independently designed and executed 100k QPS ledger migration",
+      "place": "Nexus Corp Infrastructure Group",
+      "time_expression": "2022",
+      "time_start": "2022-06-01T00:00:00.000Z",
+      "status": "disputed",
+      "unknown_slots": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-hire-001",
+      "case_id": "h5b190f2-78d1-4a22-83bc-699e1201fa22",
+      "kind": "github_commit_history",
+      "description": "Ledger migration RFC #118 authors: Marcus Vance (Tech Lead) and Team of 6 engineers; Elena Rostova listed as secondary code reviewer.",
+      "place": "Nexus Corp Internal GitHub",
+      "timestamp": "2022-08-14T16:00:00.000Z",
+      "source": "Nexus Engineering Audit Log"
+    },
+    {
+      "id": "ev-hire-002",
+      "case_id": "h5b190f2-78d1-4a22-83bc-699e1201fa22",
+      "kind": "corporate_registry",
+      "description": "Nexus Corp SEC filing: Ledger migration completed Q3 2022 under Infrastructure Platform team.",
+      "place": "Nexus Corp Public Disclosures",
+      "timestamp": "2022-09-30T00:00:00.000Z",
+      "source": "Public Regulatory Filing"
+    }
+  ],
+  "findings": [
+    {
+      "id": "f-hire-001",
+      "case_id": "h5b190f2-78d1-4a22-83bc-699e1201fa22",
+      "type": "internal_inconsistency",
+      "claim_id": "cl-hire-002",
+      "evidence_id": "ev-hire-001",
+      "status": "open",
+      "explanation": "Attribution discrepancy: Candidate claims to have 'independently designed and executed' the ledger migration, but repository audit records show RFC author was Tech Lead Marcus Vance and Candidate was reviewer."
+    }
+  ],
+  "coachQuestion": {
+    "question": "Can you walk through the division of engineering responsibilities between yourself and the team on the low-latency ledger migration project?",
+    "reason": "Examine candidate scope of ownership neutrally without accusing them of misrepresenting contributions.",
+    "priority": "high",
+    "target_slot": "what"
+  }
+}

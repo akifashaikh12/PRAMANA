@@ -1,0 +1,15 @@
+{
+  "mode": "investigation",
+  "name": "Forensic Investigation",
+  "description": "High-stakes factual inquiry prioritizing minute precision, strict slot verification, and non-leading cognitive interview questions.",
+  "time_precision": "minute",
+  "tone": "objective_forensic",
+  "required_slots": ["who", "what", "place", "time_start"],
+  "outputs": ["timeline", "discrepancies", "gaps", "chain_of_custody"],
+  "guardrails": {
+    "non_leading_questions": true,
+    "strict_corroboration": true,
+    "flag_unanchored_times": true,
+    "require_witness_id": true
+  }
+}

@@ -1,0 +1,7 @@
+kind,description,place,timestamp,source
+badge_swipe,"Keycard badge swipe #4409 (Marcus Vance) registered at Basement Server Vault Entry Door",Basement Server Vault,2024-06-12T14:02:14.000Z,Access Control System v4
+cctv_log,"Camera 04 feed: individual wearing dark trench coat exiting basement stairwell towards north parking",Basement Stairwell,2024-06-12T14:18:22.000Z,Facility CCTV Security Desk
+wifi_telemetry,"Device MAC 8A:33:F1:09 authenticated to North Express Tollway Access Point",North Express Toll Plaza,2024-06-12T17:42:00.000Z,State Highway Automated Tollway
+github_commit_history,"Ledger migration RFC #118 authors: Marcus Vance (Tech Lead) and Team of 6 engineers; Elena Rostova listed as secondary code reviewer.",Nexus Corp Internal GitHub,2022-08-14T16:00:00.000Z,Nexus Engineering Audit Log
+corporate_registry,"Nexus Corp SEC filing: Ledger migration completed Q3 2022 under Infrastructure Platform team.",Nexus Corp Public Disclosures,2022-09-30T00:00:00.000Z,Public Regulatory Filing
+family_photograph,"Polaroid labeled 'Lake George July 16 1994' showing Uncle George smiling next to Maya holding a small perch by the boat slip.",Lake George Boat Slip,1994-07-16T15:00:00.000Z,Family Photo Album #3

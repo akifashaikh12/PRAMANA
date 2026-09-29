@@ -1,0 +1,15 @@
+{
+  "mode": "diary",
+  "name": "Reflective Memory & Personal Diary",
+  "description": "Empathetic narrative processing that preserves subjective uncertainty and accommodates disputed memories without declaring winners.",
+  "time_precision": "hour",
+  "tone": "warm_reflective",
+  "required_slots": ["what", "time_start"],
+  "outputs": ["narrative_arc", "emotional_context", "memory_divergences"],
+  "guardrails": {
+    "preserve_uncertainty": true,
+    "no_winner_declaration": true,
+    "allow_ambiguity": true,
+    "highlight_divergences": true
+  }
+}

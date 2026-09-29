@@ -1,0 +1,207 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+/* ============================================================
+   PRAMANA Design System — Tailwind v4 @theme tokens
+   60-30-10 Rule: Canvas / Structure / Accent
+   8px spatial grid enforced throughout
+   ============================================================ */
+
+@theme inline {
+  /* --- Canvas (60%) --- */
+  --color-canvas: #f8fafc;
+  --color-card: #ffffff;
+  --color-surface: #f1f5f9;
+
+  /* --- Structure & Text (30%) --- */
+  --color-slate-primary: #0f172a;
+  --color-slate-secondary: #334155;
+  --color-slate-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+
+  /* --- Accent (10%) --- */
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-light: #dbeafe;
+  --color-accent-muted: #eff6ff;
+
+  /* --- Semantic States --- */
+  --color-success: #16a34a;
+  --color-success-light: #dcfce7;
+  --color-warning: #d97706;
+  --color-warning-light: #fef3c7;
+  --color-danger: #dc2626;
+  --color-danger-light: #fee2e2;
+
+  /* --- Typography --- */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Fira Code", monospace;
+
+  /* Inter type scale (Major Third 1.250) */
+  --text-body: 1rem;        /* 16px */
+  --text-h3: 1.25rem;       /* 20px */
+  --text-h2: 1.5625rem;     /* 25px */
+  --text-h1: 1.9375rem;     /* 31px */
+
+  /* Line heights */
+  --leading-body: 1.5;
+  --leading-h3: 1.4;
+  --leading-h2: 1.28;
+  --leading-h1: 1.23;
+
+  /* Letter spacing for headings */
+  --tracking-tight: -0.02em;
+
+  /* --- 8px Spatial Grid --- */
+  --spacing-1: 8px;
+  --spacing-2: 16px;
+  --spacing-3: 24px;
+  --spacing-4: 32px;
+  --spacing-6: 48px;
+  --spacing-8: 64px;
+
+  /* --- Radius --- */
+  --radius-card: 16px;   /* rounded-xl */
+  --radius-btn: 8px;     /* rounded-lg */
+}
+
+/* ============================================================
+   Global Reset & Base Styles
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* --- Typography Scale --- */
+h1 {
+  font-size: 1.9375rem;
+  font-weight: 700;
+  line-height: 1.23;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+h2 {
+  font-size: 1.5625rem;
+  font-weight: 700;
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+p {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+/* --- Focus Ring (Accessibility — WCAG 2.1 AA) --- */
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* --- Scrollbars (Light Mode) --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* --- Card Elevation Utility --- */
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+}
+
+.card-sm {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+}
+
+/* --- Primary Button Utility --- */
+.btn-primary {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+.btn-primary:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.5);
+  outline-offset: 2px;
+}
+.btn-primary:disabled {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.btn-secondary:hover {
+  background-color: #e2e8f0;
+}
