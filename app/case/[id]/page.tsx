@@ -1,22 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useCallback, useRef, use, useMemo } from "react";
 import {
   ShieldAlert,
-  ArrowLeft,
-  RefreshCw,
-  FolderOpen,
-  Share2,
-  Sliders,
-  PlusCircle,
   CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 import {
   ModeSelector,
   ModeType,
 } from "@/components/mode-selector";
+import { Header } from "@/components/header";
 import { StatementInput } from "@/components/statement-input";
 import { ClaimCard } from "@/components/claim-card";
 import { ClarificationGate } from "@/components/clarification-gate";
@@ -24,8 +17,11 @@ import { Timeline } from "@/components/timeline";
 import { EvidenceTable } from "@/components/evidence-table";
 import { FindingCard } from "@/components/finding-card";
 import { CoachPanel } from "@/components/coach-panel";
+import { AnalysisPanel } from "@/components/analysis-panel";
 import { AgentActivity } from "@/components/agent-activity";
 import { HashChainStatus } from "@/components/hash-chain-status";
+import { CaseSelector } from "@/components/case-selector";
+import { AuditTrail } from "@/components/audit-trail";
 
 import {
   ExtractedClaim,
@@ -33,134 +29,183 @@ import {
   Finding,
   CoachQuestion,
   StatementRecord,
+  CaseMeta,
 } from "@/agent/schemas";
 import { AgentLog, UnresolvedSlot } from "@/agent/state";
-import { GENESIS_HASH, computeStatementHash } from "@/tools";
+import { GENESIS_HASH } from "@/tools";
+import { synthesizeDecisions } from "@/lib/decisions";
 
 import investigationDemo from "@/demo/investigation-case.json";
 import hiringDemo from "@/demo/hiring-case.json";
 import familyDemo from "@/demo/family-case.json";
+import { useI18n } from "@/locales/i18n-context";
+import { lookupGlossary } from "@/lib/demo-glossary";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+/** Union of the three static demo case modules (pure, import-time data). */
+type DemoCase =
+  | typeof investigationDemo
+  | typeof hiringDemo
+  | typeof familyDemo;
+
+/** Pure mapping from URL id to demo module + mode (investigation is default). */
+function pickDemo(id: string): { demo: DemoCase; mode: ModeType } {
+  if (id.includes("hiring")) return { demo: hiringDemo, mode: "hiring" };
+  if (id.includes("diary") || id.includes("family")) return { demo: familyDemo, mode: "diary" };
+  return { demo: investigationDemo, mode: "investigation" };
+}
+
 export default function CaseWorkspacePage({ params }: PageProps) {
   const resolvedParams = use(params);
   const caseId = resolvedParams.id;
+  const { t, lang } = useI18n();
+
+  // Seed initial state directly from the demo matching the URL id (no mount flash)
+  const initial = pickDemo(caseId);
 
   // Active Mode State
-  const [currentMode, setCurrentMode] = useState<ModeType>("investigation");
-  const [caseTitle, setCaseTitle] = useState("Meridian Vault & Server Intrusion");
+  const [currentMode, setCurrentMode] = useState<ModeType>(initial.mode);
+  const [caseTitle, setCaseTitle] = useState(initial.demo.case.title);
 
   // Core Agent Data
-  const [statements, setStatements] = useState<StatementRecord[]>([]);
-  const [claims, setClaims] = useState<ExtractedClaim[]>([]);
-  const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
-  const [findings, setFindings] = useState<Finding[]>([]);
-  const [coachQuestion, setCoachQuestion] = useState<CoachQuestion | null>(null);
+  const [statements, setStatements] = useState<StatementRecord[]>(
+    initial.demo.statements as StatementRecord[]
+  );
+  const [claims, setClaims] = useState<ExtractedClaim[]>(
+    initial.demo.claims as ExtractedClaim[]
+  );
+  const [evidenceList, setEvidenceList] = useState<Evidence[]>(
+    initial.demo.evidence as Evidence[]
+  );
+  const [findings, setFindings] = useState<Finding[]>(
+    initial.demo.findings as Finding[]
+  );
+  const [coachQuestion, setCoachQuestion] = useState<CoachQuestion | null>(
+    (initial.demo.coachQuestion as CoachQuestion) ?? null
+  );
 
   // Clarification Gate State
   const [unresolvedSlots, setUnresolvedSlots] = useState<UnresolvedSlot[]>([]);
   const [clarificationQuestion, setClarificationQuestion] = useState<string | null>(null);
+
+  // Decisions Made (derived deterministically; recomputed on data change)
+  const decisions = useMemo(
+    () => synthesizeDecisions(claims, evidenceList),
+    [claims, evidenceList]
+  );
 
   // Execution Telemetry
   const [isProcessing, setIsProcessing] = useState(false);
   const [logs, setLogs] = useState<AgentLog[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Load demo case based on ID or default to investigation
-  useEffect(() => {
-    if (caseId.includes("hiring")) {
-      loadHiringDemo();
-    } else if (caseId.includes("diary") || caseId.includes("family")) {
-      loadDiaryDemo();
-    } else {
-      loadInvestigationDemo();
-    }
-  }, [caseId]);
+  // Persisted case metadata (null when working on a local/demo-only case)
+  const [caseMeta, setCaseMeta] = useState<CaseMeta | null>(null);
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
 
-  const showNotification = (msg: string) => {
+  const showNotification = useCallback((msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
-  };
+  }, []);
 
-  const loadInvestigationDemo = () => {
-    setCurrentMode("investigation");
-    setCaseTitle(investigationDemo.case.title);
-    setStatements(investigationDemo.statements as StatementRecord[]);
-    setClaims(investigationDemo.claims as ExtractedClaim[]);
-    setEvidenceList(investigationDemo.evidence as Evidence[]);
-    setFindings(investigationDemo.findings as Finding[]);
-    setCoachQuestion(investigationDemo.coachQuestion as CoachQuestion);
-    setUnresolvedSlots([]);
-    setClarificationQuestion(null);
-    setLogs([
-      {
-        step: "CASE_LOADED",
-        message: "Loaded 'Meridian Vault Intrusion' demo with 2 cryptographic statements and 3 evidence records.",
-        timestamp: new Date().toISOString(),
-      },
-      {
-        step: "EVALUATE_EVIDENCE",
-        message: "Verified SHA-256 chain. Flagged 1 location conflict and 1 unaccounted 3h timeline gap.",
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-    showNotification("Loaded Investigation Demo Case");
-  };
+  /**
+   * Record a sensitive modification in the immutable audit log and refresh
+   * the trail. Silently skips when the case is not persisted (demo mode).
+   * Original statement/claim text is NEVER altered here — only the audit
+   * ledger is appended to, keeping the statement SHA-256 chain intact.
+   */
+  const auditTrail = useCallback(
+    async (
+      actionType: "STATEMENT_ADDED" | "EVIDENCE_MODIFIED" | "CLAIM_DELETED" | "CASE_UPDATED",
+      previousState: unknown,
+      newState: unknown
+    ) => {
+      if (!caseMeta) return;
+      try {
+        const res = await fetch(`/api/cases/${caseMeta.id}/audit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actionType,
+            changedBy: "workspace_user",
+            previousState,
+            newState,
+          }),
+        });
+        if (res.ok) setAuditRefreshKey((k) => k + 1);
+      } catch {
+        // Audit persistence is best-effort in demo/unconfigured mode
+      }
+    },
+    [caseMeta]
+  );
 
-  const loadHiringDemo = () => {
-    setCurrentMode("hiring");
-    setCaseTitle(hiringDemo.case.title);
-    setStatements(hiringDemo.statements as StatementRecord[]);
-    setClaims(hiringDemo.claims as ExtractedClaim[]);
-    setEvidenceList(hiringDemo.evidence as Evidence[]);
-    setFindings(hiringDemo.findings as Finding[]);
-    setCoachQuestion(hiringDemo.coachQuestion as CoachQuestion);
-    setUnresolvedSlots([]);
-    setClarificationQuestion(null);
-    setLogs([
-      {
-        step: "CASE_LOADED",
-        message: "Loaded 'Principal Architect Reference' demo in Hiring verification mode.",
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-    showNotification("Loaded Hiring Demo Case");
-  };
+  const handleCaseChanged = useCallback((updated: CaseMeta | null) => {
+    setCaseMeta(updated);
+    if (updated) {
+      setCaseTitle(updated.title);
+      setAuditRefreshKey((k) => k + 1);
+    }
+  }, []);
 
-  const loadDiaryDemo = () => {
-    setCurrentMode("diary");
-    setCaseTitle(familyDemo.case.title);
-    setStatements(familyDemo.statements as StatementRecord[]);
-    setClaims(familyDemo.claims as ExtractedClaim[]);
-    setEvidenceList(familyDemo.evidence as Evidence[]);
-    setFindings(familyDemo.findings as Finding[]);
-    setCoachQuestion(familyDemo.coachQuestion as CoachQuestion);
-    setUnresolvedSlots([]);
-    setClarificationQuestion(null);
-    setLogs([
-      {
-        step: "CASE_LOADED",
-        message: "Loaded '1994 Lake Trip' in Diary reflective memory mode. Preserving parallel recollections.",
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-    showNotification("Loaded Diary Demo Case");
-  };
+  /** Load a demo case into local state (pure data in, state setters out). */
+  const loadDemo = useCallback(
+    (demo: DemoCase, mode: ModeType) => {
+      setCurrentMode(mode);
+      setCaseTitle(demo.case.title);
+      setStatements(demo.statements as StatementRecord[]);
+      setClaims(demo.claims as ExtractedClaim[]);
+      setEvidenceList(demo.evidence as Evidence[]);
+      setFindings(demo.findings as Finding[]);
+      setCoachQuestion(demo.coachQuestion as CoachQuestion);
+      setUnresolvedSlots([]);
+      setClarificationQuestion(null);
+      setLogs([
+        {
+          step: "CASE_LOADED",
+          message: `Loaded "${demo.case.title}" (${mode} mode) with ${demo.statements.length} cryptographic statement(s), ${demo.claims.length} claim(s) and ${demo.evidence.length} evidence record(s).`,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      showNotification(t("case_loaded"));
+    },
+    [showNotification, t]
+  );
+
+  const demoForMode = useCallback((mode: ModeType): DemoCase => {
+    switch (mode) {
+      case "hiring":
+        return hiringDemo;
+      case "diary":
+        return familyDemo;
+      default:
+        return investigationDemo;
+    }
+  }, []);
+
+  // Reload demo data when navigating between case ids (initial state is
+  // seeded above; ref initialized with caseId skips the redundant mount run)
+  const loadedCaseRef = useRef(caseId);
+  useEffect(() => {
+    if (loadedCaseRef.current === caseId) return;
+    loadedCaseRef.current = caseId;
+    const frame = requestAnimationFrame(() => {
+      const next = pickDemo(caseId);
+      loadDemo(next.demo, next.mode);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [caseId, loadDemo]);
 
   // Switch mode handler
-  const handleModeChange = (mode: ModeType) => {
-    setCurrentMode(mode);
-    if (mode === "investigation") {
-      loadInvestigationDemo();
-    } else if (mode === "hiring") {
-      loadHiringDemo();
-    } else {
-      loadDiaryDemo();
-    }
-  };
+  const handleModeChange = useCallback(
+    (mode: ModeType) => {
+      loadDemo(demoForMode(mode), mode);
+    },
+    [loadDemo, demoForMode]
+  );
 
   // Submit new statement to backend agent
   const handleStatementSubmit = async (data: {
@@ -196,7 +241,7 @@ export default function CaseWorkspacePage({ params }: PageProps) {
       const agentState = json.state;
       const hashMeta = json.hashMetadata;
 
-      // Update statements with cryptographic hash chain
+      // Update statements with cryptographic hash chain (verbatim body preserved)
       if (hashMeta) {
         const newStatementRecord: StatementRecord = {
           id: `st-${Date.now()}`,
@@ -209,6 +254,11 @@ export default function CaseWorkspacePage({ params }: PageProps) {
           created_at: hashMeta.createdAt,
         };
         setStatements((prev) => [...prev, newStatementRecord]);
+        void auditTrail("STATEMENT_ADDED", null, {
+          narrator: data.narrator,
+          hash: hashMeta.currentHash,
+          length: data.statement.length,
+        });
       }
 
       // Merge newly extracted claims
@@ -243,10 +293,10 @@ export default function CaseWorkspacePage({ params }: PageProps) {
         setLogs((prev) => [...prev, ...agentState.logs]);
       }
 
-      showNotification("Statement processed and appended to cryptographic narrative chain.");
+      showNotification(t("case_loaded"));
     } catch (err: unknown) {
       console.error(err);
-      showNotification(`Processing Error: ${err instanceof Error ? err.message : String(err)}`);
+      showNotification(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsProcessing(false);
     }
@@ -280,7 +330,7 @@ export default function CaseWorkspacePage({ params }: PageProps) {
         if (json.state.findings) setFindings(json.state.findings);
         if (json.state.nextBestQuestion) setCoachQuestion(json.state.nextBestQuestion);
         if (json.state.logs) setLogs((prev) => [...prev, ...json.state.logs]);
-        showNotification(`Slot [${slot.toUpperCase()}] resolved successfully.`);
+        showNotification(t("resolve") + ": " + slot);
       }
     } catch (err: unknown) {
       console.error(err);
@@ -293,98 +343,104 @@ export default function CaseWorkspacePage({ params }: PageProps) {
   // Add new evidence item
   const handleAddEvidence = (ev: Evidence) => {
     setEvidenceList((prev) => [ev, ...prev]);
-    showNotification(`New evidentiary record added: ${ev.source}`);
+    showNotification(`${t("evidence_label")}: ${ev.source}`);
+    void auditTrail("EVIDENCE_MODIFIED", null, {
+      added: { id: ev.id, kind: ev.kind, source: ev.source },
+    });
   };
 
+  // Delete a claim (sensitive modification — audit-logged, originals in any
+  // persisted store are untouched; this affects the working set only)
+  const handleDeleteClaim = useCallback(
+    (claim: ExtractedClaim) => {
+      setClaims((prev) => prev.filter((c) => c !== claim && c.source_quote !== claim.source_quote));
+      showNotification(t("claim_deleted"));
+      void auditTrail("CLAIM_DELETED", { id: claim.id, what: claim.what }, null);
+    },
+    [auditTrail, showNotification, t]
+  );
+
+  // Inject claims extracted from an uploaded resume (verbatim source lines kept)
+  const handleAddClaims = useCallback(
+    (newClaims: ExtractedClaim[], fileName: string) => {
+      setClaims((prev) => {
+        const existing = new Set(prev.map((c) => c.source_quote));
+        const deduped = newClaims.filter((c) => !existing.has(c.source_quote));
+        return [...prev, ...deduped];
+      });
+      showNotification(`${fileName}: +${newClaims.length} ${t("claims_title")}`);
+    },
+    [showNotification, t]
+  );
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-amber-500/30 selection:text-amber-200">
-      {/* 1. TOP HEADER */}
-      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3 shadow-lg">
-        <div className="max-w-[1720px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          {/* Logo & Case Title */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition-colors"
-              title="Return to Cases"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
+    <div className="min-h-screen bg-canvas text-ink flex flex-col">
+      {/* 1. TOP HEADER with Language Switcher */}
+      <Header
+        variant="compact"
+        caseTitle={
+          lang !== "en" ? (lookupGlossary(caseTitle, lang) ?? caseTitle) : caseTitle
+        }
+        caseId={caseId}
+      />
 
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20">
-                PR
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-sm font-bold tracking-tight text-slate-100 line-clamp-1">
-                    {caseTitle}
-                  </h1>
-                  <span className="text-[10px] bg-slate-800 text-slate-400 border border-slate-700/60 px-2 py-0.5 rounded-full font-mono">
-                    ID: {caseId.slice(0, 8)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                  <span>PRAMANA Unified Truth-Seeking Engine</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Mode Tabs + Demo Switcher Row */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-[1720px] mx-auto px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <ModeSelector
+            currentMode={currentMode}
+            onModeChange={handleModeChange}
+            disabled={isProcessing}
+          />
 
-          {/* Mode Selector Pill Tabs */}
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-            <ModeSelector
-              currentMode={currentMode}
-              onModeChange={handleModeChange}
-              disabled={isProcessing}
+          {/* Quick Demo Switcher */}
+          <div className="flex flex-wrap items-center gap-2">
+            <CaseSelector
+              compact
+              activeCaseId={caseMeta?.id ?? null}
+              activeCaseTitle={caseMeta ? caseTitle : null}
+              createMode={currentMode}
+              onCaseChanged={handleCaseChanged}
             />
-
-            {/* Quick Demo Switcher */}
-            <div className="hidden sm:flex items-center gap-1.5">
-              <button
-                onClick={loadInvestigationDemo}
-                className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer"
-                title="Load Investigation Demo Case"
-              >
-                Heist Case
-              </button>
-              <button
-                onClick={loadHiringDemo}
-                className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer"
-                title="Load Hiring Reference Demo Case"
-              >
-                Hiring Case
-              </button>
-              <button
-                onClick={loadDiaryDemo}
-                className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer"
-                title="Load Reflective Diary Demo Case"
-              >
-                Diary Case
-              </button>
-            </div>
+            <button
+              onClick={() => handleModeChange("investigation")}
+              className="btn-secondary h-8 text-xs"
+              title="Load Investigation Demo Case"
+            >
+              {t("heist_case")}
+            </button>
+            <button
+              onClick={() => handleModeChange("hiring")}
+              className="btn-secondary h-8 text-xs"
+              title="Load Hiring Reference Demo Case"
+            >
+              {t("hiring_case")}
+            </button>
+            <button
+              onClick={() => handleModeChange("diary")}
+              className="btn-secondary h-8 text-xs"
+              title="Load Reflective Diary Demo Case"
+            >
+              {t("diary_case")}
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Temporary Toast Notification */}
       {notification && (
-        <div className="fixed bottom-4 right-4 z-50 bg-slate-900 border border-amber-500/50 text-amber-200 text-xs px-4 py-2.5 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-2 animate-bounce">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-4 right-4 z-50 bg-white border border-slate-200 shadow-lg text-ink text-sm px-4 py-3 rounded-xl flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-success" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* 2. MAIN 3-COLUMN WORKSPACE */}
       <main className="flex-1 max-w-[1720px] w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* ============================================================ */}
-        {/* LEFT COLUMN: TIMELINE & CRYPTOGRAPHIC AUDIT (Cols 1-3)       */}
-        {/* ============================================================ */}
+        {/* LEFT COLUMN: TIMELINE & CRYPTOGRAPHIC AUDIT */}
         <section className="lg:col-span-3 space-y-4 flex flex-col">
-          {/* SHA-256 Hash Chain Integrity Status */}
           <HashChainStatus statements={statements} />
-
-          {/* Chronological Event Timeline & React Flow Graph */}
+          <AuditTrail caseId={caseMeta?.id ?? null} refreshKey={auditRefreshKey} />
           <div className="flex-1">
             <Timeline
               claims={claims}
@@ -394,20 +450,19 @@ export default function CaseWorkspacePage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* ============================================================ */}
-        {/* CENTER COLUMN: CLAIM WORKSPACE (Cols 4-8)                     */}
-        {/* ============================================================ */}
+        {/* CENTER COLUMN: CLAIM WORKSPACE */}
         <section className="lg:col-span-5 space-y-4 flex flex-col">
-          {/* Statement Submission Input */}
           <StatementInput
             onSubmit={handleStatementSubmit}
+            onAddEvidence={handleAddEvidence}
+            onAddClaims={handleAddClaims}
             isLoading={isProcessing}
+            mode={currentMode}
             defaultNarrator={
               statements.length > 0 ? statements[statements.length - 1].narrator : ""
             }
           />
 
-          {/* Clarification Gate (Only shows if required slots are missing) */}
           <ClarificationGate
             unresolvedSlots={unresolvedSlots}
             clarificationQuestion={clarificationQuestion}
@@ -416,26 +471,26 @@ export default function CaseWorkspacePage({ params }: PageProps) {
           />
 
           {/* Extracted Atomic Claims List */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md flex-1 flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex-1 flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                  Extracted Atomic Claims
+                <span className="w-2 h-2 rounded-full bg-accent" />
+                <h3 className="text-xs font-bold text-ink uppercase tracking-wide">
+                  {t("claims_title")}
                 </h3>
-                <span className="text-[10px] bg-slate-800 text-amber-400 px-2 py-0.5 rounded-full font-mono font-semibold">
+                <span className="text-xs bg-accent-muted text-accent px-2 py-0.5 rounded-full font-mono font-semibold border border-accent-light">
                   {claims.length}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400">
-                Mode: <span className="font-semibold text-slate-300 capitalize">{currentMode}</span>
+              <span className="text-xs text-muted">
+                {t("mode_label")}: <span className="font-semibold text-ink capitalize">{currentMode}</span>
               </span>
             </div>
 
             <div className="space-y-3 flex-1 overflow-y-auto max-h-[580px] pr-1">
               {claims.length === 0 ? (
-                <div className="text-center py-12 text-slate-500 text-xs">
-                  No claims extracted yet. Enter a statement above or load a demo case.
+                <div className="text-center py-8 text-sm text-muted">
+                  {t("no_claims")}
                 </div>
               ) : (
                 claims.map((claim, idx) => (
@@ -444,6 +499,7 @@ export default function CaseWorkspacePage({ params }: PageProps) {
                     claim={claim}
                     index={idx}
                     highlighted={claim.status === "disputed"}
+                    onClaimDelete={handleDeleteClaim}
                   />
                 ))
               )}
@@ -451,34 +507,37 @@ export default function CaseWorkspacePage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* ============================================================ */}
-        {/* RIGHT COLUMN: COACH, FINDINGS & AUDIT RECORDS (Cols 9-12)    */}
-        {/* ============================================================ */}
+        {/* RIGHT COLUMN: CONFLICT ENGINE, COACH & AUDIT RECORDS */}
         <section className="lg:col-span-4 space-y-4 flex flex-col">
-          {/* Cognitive Interview Coach Panel */}
+          <AnalysisPanel
+            decisions={decisions}
+            findings={findings}
+            coachQuestionText={coachQuestion?.question ?? null}
+          />
+
           <CoachPanel
             coachQuestion={coachQuestion}
-            onUseQuestion={(q) => showNotification(`Copied question to clipboard: "${q}"`)}
+            onUseQuestion={(q) => showNotification(`"${q}"`)}
           />
 
           {/* Structured Evidentiary Findings */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-rose-400" />
-                <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                  Evidentiary Findings & Anomaly Flags
+                <ShieldAlert className="w-4 h-4 text-danger" />
+                <h3 className="text-xs font-bold text-ink uppercase tracking-wide">
+                  {t("findings_title")}
                 </h3>
               </div>
-              <span className="text-[10px] bg-rose-950 text-rose-400 border border-rose-800/80 px-2 py-0.5 rounded-full font-mono font-bold">
+              <span className="text-xs bg-danger-light text-danger border border-danger/20 px-2 py-0.5 rounded-full font-mono font-bold">
                 {findings.length}
               </span>
             </div>
 
-            <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
               {findings.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-500">
-                  No contradictions or timeline gaps detected.
+                <div className="text-center py-6 text-sm text-muted">
+                  {t("no_findings")}
                 </div>
               ) : (
                 findings.map((finding) => (
@@ -489,7 +548,7 @@ export default function CaseWorkspacePage({ params }: PageProps) {
                       setFindings((prev) =>
                         prev.map((f) => (f.id === id ? { ...f, status } : f))
                       );
-                      showNotification(`Finding updated to: ${status}`);
+                      showNotification(`${t("findings_title")}: ${status}`);
                     }}
                   />
                 ))
@@ -497,13 +556,11 @@ export default function CaseWorkspacePage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Verified Evidence Logs Table */}
           <EvidenceTable
             evidenceList={evidenceList}
             onAddEvidence={handleAddEvidence}
           />
 
-          {/* Real-Time Agent Execution Activity */}
           <AgentActivity logs={logs} isExecuting={isProcessing} />
         </section>
       </main>

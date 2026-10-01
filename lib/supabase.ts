@@ -2,8 +2,6 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   StatementRecord,
   ExtractedClaim,
-  Finding,
-  Evidence,
 } from "@/agent/schemas";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -6,6 +6,7 @@ import {
   ExtractionOutputSchema,
   CoachQuestion,
   CoachQuestionSchema,
+  Finding,
 } from "./schemas";
 import {
   getClaimExtractionPrompt,
@@ -19,6 +20,7 @@ import {
   detectConflicts,
   detectTimelineGaps,
 } from "../tools";
+import { synthesizeDecisions } from "../lib/decisions";
 
 // Initialize ChatGroq LLM helper
 function getGroqLLM(temperature = 0.1) {
@@ -248,28 +250,85 @@ async function generateClarificationNode(state: AgentState): Promise<Partial<Age
  */
 async function evaluateEvidenceNode(state: AgentState): Promise<Partial<AgentState>> {
   const timestamp = new Date().toISOString();
-  const conflictFindings = detectConflicts(state.extractedClaims, state.evidenceList);
-  const gapFindings = detectTimelineGaps(state.extractedClaims, state.evidenceList, {
+
+  // AUDIT-CHAIN SAFETY: deduplicate claims by verbatim source_quote so a resubmitted
+  // statement is never audited twice (its disputes would double-report). Original
+  // claim objects are never mutated - copies carry deterministic ids.
+  const claimsUnderAudit = state.extractedClaims
+    .filter(
+      (c, i, arr) => arr.findIndex((x) => x.source_quote === c.source_quote) === i
+    )
+    .map((c, i) => ({ ...c, id: c.id || `claim-eval-${i}` }));
+
+  const conflictFindings = detectConflicts(claimsUnderAudit, state.evidenceList);
+  const gapFindings = detectTimelineGaps(claimsUnderAudit, state.evidenceList, {
     mode: state.modeConfig.mode,
   });
 
-  const combinedFindings = [...state.findings, ...conflictFindings, ...gapFindings];
+  // Cross-claim contradiction detection: same narrator asserting different
+  // places or times across their own claims.
+  const disputeFindings: Finding[] = [];
+  for (let i = 0; i < claimsUnderAudit.length; i++) {
+    for (let j = i + 1; j < claimsUnderAudit.length; j++) {
+      const a = claimsUnderAudit[i];
+      const b = claimsUnderAudit[j];
+
+      if (!a.who || !b.who || a.who !== b.who) continue;
+      if (a.source_quote === b.source_quote) continue;
+
+      const conflicts: string[] = [];
+      if (
+        a.place &&
+        b.place &&
+        a.place.trim().toLowerCase() !== b.place.trim().toLowerCase()
+      ) {
+        conflicts.push(`place ("${a.place}" vs "${b.place}")`);
+      }
+      if (a.time_start && b.time_start && a.time_start !== b.time_start) {
+        conflicts.push(
+          `time (${new Date(a.time_start).toISOString()} vs ${new Date(b.time_start).toISOString()})`
+        );
+      }
+      if (conflicts.length === 0) continue;
+
+      disputeFindings.push({
+        id: `f-dispute-${i}-${j}`,
+        type: "statement_dispute",
+        claim_id: a.id,
+        evidence_id: b.id,
+        status: "open",
+        explanation: `${a.who} makes contradictory claims: ${conflicts.join("; ")}. "${a.what}" vs "${b.what}".`,
+      });
+    }
+  }
+
+  const combinedFindings = [
+    ...state.findings,
+    ...conflictFindings,
+    ...gapFindings,
+    ...disputeFindings,
+  ];
 
   // Deduplicate findings by explanation or id
   const uniqueFindings = combinedFindings.filter(
     (f, idx, arr) => arr.findIndex((x) => x.explanation === f.explanation) === idx
   );
 
+  // DECISIONS MADE: deterministic summary of what the timeline has established
+  // (shared helper — see lib/decisions.ts). Originals are never mutated.
+  const decisions = synthesizeDecisions(claimsUnderAudit, state.evidenceList);
+
   const logs: AgentLog[] = [
     {
       step: "EVALUATE_EVIDENCE",
-      message: `Audited ${state.extractedClaims.length} claims against ${state.evidenceList.length} evidence records. Detected ${conflictFindings.length} conflict(s) and ${gapFindings.length} timeline gap(s).`,
+      message: `Audited ${claimsUnderAudit.length} claims against ${state.evidenceList.length} evidence records. Detected ${conflictFindings.length} conflict(s), ${gapFindings.length} timeline gap(s) and ${disputeFindings.length} cross-claim dispute(s). Synthesized ${decisions.length} decision(s).`,
       timestamp,
     },
   ];
 
   return {
     findings: uniqueFindings,
+    decisions,
     logs,
   };
 }

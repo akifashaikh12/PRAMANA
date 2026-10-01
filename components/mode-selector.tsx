@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { ShieldAlert, Briefcase, BookOpen, Clock, CheckCircle } from "lucide-react";
+import { ShieldAlert, Briefcase, BookOpen, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/locales/i18n-context";
+import type { TranslationKey } from "@/locales/translations";
 
 export type ModeType = "investigation" | "hiring" | "diary";
 
@@ -12,33 +14,33 @@ interface ModeSelectorProps {
   disabled?: boolean;
 }
 
-const MODES = [
+const MODES: {
+  id: ModeType;
+  labelKey: TranslationKey;
+  icon: React.ComponentType<{ className?: string }>;
+  taglineKey: TranslationKey;
+  precisionKey: TranslationKey;
+}[] = [
   {
-    id: "investigation" as ModeType,
-    label: "Investigation",
+    id: "investigation",
+    labelKey: "mode_investigation",
     icon: ShieldAlert,
-    tagline: "Forensic Truth-Seeking",
-    precision: "Minute Precision",
-    color: "from-amber-500/20 to-rose-500/20 text-amber-400 border-amber-500/30",
-    activePill: "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-amber-500/20",
+    taglineKey: "investigation_tagline",
+    precisionKey: "minute_precision",
   },
   {
-    id: "hiring" as ModeType,
-    label: "Hiring",
+    id: "hiring",
+    labelKey: "mode_hiring",
     icon: Briefcase,
-    tagline: "Reference Verification",
-    precision: "Day Precision",
-    color: "from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/30",
-    activePill: "bg-blue-500/20 text-blue-300 border-blue-500/50 shadow-blue-500/20",
+    taglineKey: "hiring_tagline",
+    precisionKey: "day_precision",
   },
   {
-    id: "diary" as ModeType,
-    label: "Diary",
+    id: "diary",
+    labelKey: "mode_diary",
     icon: BookOpen,
-    tagline: "Reflective Memory",
-    precision: "Hour Precision",
-    color: "from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30",
-    activePill: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-emerald-500/20",
+    taglineKey: "diary_tagline",
+    precisionKey: "hour_precision",
   },
 ];
 
@@ -47,12 +49,13 @@ export function ModeSelector({
   onModeChange,
   disabled = false,
 }: ModeSelectorProps) {
-  const activeModeData = MODES.find((m) => m.id === currentMode) || MODES[0];
+  const { t } = useI18n();
+  const activeModeData = MODES.find((m) => m.id === currentMode) ?? MODES[0];
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-      {/* Pill tabs */}
-      <div className="inline-flex p-1 bg-slate-900/90 border border-slate-800 rounded-xl shadow-inner backdrop-blur-md">
+      {/* Pill tabs — active tab uses the 10% Electric Royal Blue accent */}
+      <div className="inline-flex p-1 bg-slate-100 border border-slate-200 rounded-xl">
         {MODES.map((m) => {
           const Icon = m.icon;
           const isActive = currentMode === m.id;
@@ -62,31 +65,25 @@ export function ModeSelector({
               onClick={() => onModeChange(m.id)}
               disabled={disabled}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer",
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer",
                 isActive
-                  ? cn(
-                      "bg-slate-800 shadow-md border border-slate-700",
-                      m.activePill
-                    )
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent"
+                  ? "bg-accent text-white shadow-sm"
+                  : "text-ink-secondary hover:text-ink hover:bg-white"
               )}
             >
               <Icon className="w-3.5 h-3.5" />
-              <span>{m.label}</span>
-              {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
-              )}
+              <span>{t(m.labelKey)}</span>
             </button>
           );
         })}
       </div>
 
       {/* Mode metadata badge */}
-      <div className="hidden lg:flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/60 border border-slate-800/80 px-2.5 py-1 rounded-lg">
-        <Clock className="w-3 h-3 text-slate-500" />
-        <span className="text-slate-300 font-mono">{activeModeData.precision}</span>
-        <span className="text-slate-600">•</span>
-        <span className="text-slate-400 italic">{activeModeData.tagline}</span>
+      <div className="hidden lg:flex items-center gap-2 text-xs text-muted bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm">
+        <Clock className="w-3 h-3 text-accent" />
+        <span className="text-ink font-semibold">{t(activeModeData.precisionKey)}</span>
+        <span className="text-slate-300">•</span>
+        <span>{t(activeModeData.taglineKey)}</span>
       </div>
     </div>
   );

@@ -75,6 +75,14 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: (_x, y) => y,
     default: () => null,
   }),
+  /**
+   * Decisions Made: verifiable facts established by the timeline,
+   * e.g. "Verified: Alice claims arriving 09:00; badge log confirms 08:57".
+   */
+  decisions: Annotation<string[]>({
+    reducer: (_x, y) => y,
+    default: () => [],
+  }),
   logs: Annotation<AgentLog[]>({
     reducer: (x, y) => (y ? [...x, ...y] : x),
     default: () => [],

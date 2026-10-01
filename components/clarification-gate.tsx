@@ -1,8 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { HelpCircle, ArrowRight, CheckCircle2, ShieldQuestion, Loader2 } from "lucide-react";
+import { ArrowRight, ShieldQuestion, Loader2 } from "lucide-react";
 import { UnresolvedSlot } from "@/agent/state";
+import { useI18n } from "@/locales/i18n-context";
+import { useDynamicTranslations } from "@/locales/dynamic-translation";
+import { useMemo } from "react";
 
 interface ClarificationGateProps {
   unresolvedSlots: UnresolvedSlot[];
@@ -17,8 +20,21 @@ export function ClarificationGate({
   onResolve,
   isLoading = false,
 }: ClarificationGateProps) {
+  const { t } = useI18n();
   const [answer, setAnswer] = useState("");
   const currentSlot = unresolvedSlots[0];
+
+  // 100% language enforcement: the verbatim claim quote and the LLM-generated
+  // clarification question render in the active language (display-only).
+  const dynamicTexts = useMemo(
+    () =>
+      [
+        currentSlot?.claimQuote,
+        clarificationQuestion,
+      ].filter((s): s is string => Boolean(s && s.trim())),
+    [currentSlot?.claimQuote, clarificationQuestion]
+  );
+  const { translations } = useDynamicTranslations(dynamicTexts);
 
   if (!currentSlot && !clarificationQuestion) {
     return null;
@@ -36,15 +52,15 @@ export function ClarificationGate({
   };
 
   return (
-    <div className="bg-gradient-to-br from-amber-950/30 via-slate-900/90 to-slate-950 border border-amber-500/40 rounded-2xl p-4 shadow-xl shadow-amber-500/5 backdrop-blur-md space-y-3">
+    <div className="bg-warning-light border border-warning/30 rounded-xl p-4 space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-amber-500/20">
-        <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs tracking-wide">
-          <ShieldQuestion className="w-4 h-4 text-amber-400 animate-pulse" />
-          <span>Clarification Gate: Missing Required Slot</span>
+      <div className="flex items-center justify-between pb-3 border-b border-warning/20">
+        <div className="flex items-center gap-2 text-warning font-semibold text-xs tracking-wide">
+          <ShieldQuestion className="w-4 h-4" />
+          <span>{t("clarification_gate")}</span>
         </div>
         {currentSlot && (
-          <span className="text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold">
+          <span className="text-xs font-mono uppercase bg-white text-warning border border-warning/30 px-2 py-0.5 rounded-full font-bold">
             {currentSlot.slot}
           </span>
         )}
@@ -53,62 +69,62 @@ export function ClarificationGate({
       {/* Target Claim Quote & Question */}
       <div className="space-y-2">
         {currentSlot?.claimQuote && (
-          <p className="text-[11px] text-slate-400 italic bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-            Anchor: "{currentSlot.claimQuote}"
+          <p className="text-xs text-muted italic bg-white p-2 rounded-lg border border-slate-200">
+            {t("clarification_anchor")} &ldquo;{translations[currentSlot.claimQuote] ?? currentSlot.claimQuote}&rdquo;
           </p>
         )}
-        <div className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-xl">
-          <p className="text-xs font-medium text-amber-100 leading-relaxed">
-            {clarificationQuestion ||
-              `Could you provide the missing ${currentSlot?.slot || "information"} for this claim?`}
+        <div className="p-3 bg-white border border-warning/30 rounded-lg">
+          <p className="text-sm font-medium text-ink leading-relaxed">
+            {(clarificationQuestion && (translations[clarificationQuestion] ?? clarificationQuestion)) ||
+              t("clarification_fallback")}
           </p>
         </div>
       </div>
 
       {/* Answer Form */}
-      <form onSubmit={handleSubmit} className="space-y-2 pt-1">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <div className="flex gap-2">
           <input
             type="text"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder={`Provide clarifying ${currentSlot?.slot || "detail"} (e.g. specific room, name, or time)...`}
+            placeholder={t("clarification_placeholder")}
             disabled={isLoading}
-            className="flex-1 px-3 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/60 focus:border-amber-500/60 transition-all"
+            className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
           />
           <button
             type="submit"
             disabled={!answer.trim() || isLoading}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer"
+            className="btn-primary h-9 disabled:bg-slate-100 disabled:text-muted"
           >
             {isLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <>
-                <span>Resolve</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>{t("resolve")}</span>
+                <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </div>
 
         {/* Quick Suggestion Pills */}
-        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 pt-0.5">
-          <span>Quick fill:</span>
+        <div className="flex items-center gap-2 text-xs text-muted">
+          <span>{t("quick_fill")}</span>
           <button
             type="button"
             onClick={() => handleQuickAnswer("Basement Vault Entrance at 14:02")}
-            className="hover:text-amber-300 underline decoration-dotted"
+            className="text-accent hover:underline decoration-dotted cursor-pointer"
           >
-            "Basement Vault at 14:02"
+            &ldquo;{t("quick_fill_time")}&rdquo;
           </button>
           <span>•</span>
           <button
             type="button"
             onClick={() => handleQuickAnswer("North Wing Conference Room")}
-            className="hover:text-amber-300 underline decoration-dotted"
+            className="text-accent hover:underline decoration-dotted cursor-pointer"
           >
-            "North Conference Room"
+            &ldquo;{t("quick_fill_place")}&rdquo;
           </button>
         </div>
       </form>

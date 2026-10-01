@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { I18nProvider } from "@/locales/i18n-context";
+import { DynamicTranslationProvider } from "@/locales/dynamic-translation";
 
 export const metadata: Metadata = {
   title: "PRAMANA • Stateful Agentic Truth & Evidentiary Verification Engine",
@@ -24,11 +15,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark bg-slate-950 text-slate-100 antialiased`}
-    >
-      <body className="min-h-screen bg-slate-950 flex flex-col font-sans">{children}</body>
+    <html lang="en">
+      <body className="min-h-screen bg-canvas text-ink antialiased">
+        <I18nProvider>
+          <DynamicTranslationProvider>{children}</DynamicTranslationProvider>
+        </I18nProvider>
+      </body>
     </html>
   );
 }

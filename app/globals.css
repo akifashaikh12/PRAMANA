@@ -1,10 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Gujarati:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 /* ============================================================
    PRAMANA Design System — Tailwind v4 @theme tokens
    60-30-10 Rule: Canvas / Structure / Accent
-   8px spatial grid enforced throughout
+   8px spatial grid (default Tailwind spacing is 4px-based;
+   we only use 8px multiples: p-4=16px, p-6=24px, gap-4=16px)
    ============================================================ */
 
 @theme inline {
@@ -14,11 +15,10 @@
   --color-surface: #f1f5f9;
 
   /* --- Structure & Text (30%) --- */
-  --color-slate-primary: #0f172a;
-  --color-slate-secondary: #334155;
-  --color-slate-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
+  --color-ink: #0f172a;
+  --color-ink-secondary: #334155;
+  --color-muted: #64748b;
+  --color-hairline: #e2e8f0;
 
   /* --- Accent (10%) --- */
   --color-accent: #2563eb;
@@ -26,7 +26,7 @@
   --color-accent-light: #dbeafe;
   --color-accent-muted: #eff6ff;
 
-  /* --- Semantic States --- */
+  /* --- Semantic States (functional, used sparingly) --- */
   --color-success: #16a34a;
   --color-success-light: #dcfce7;
   --color-warning: #d97706;
@@ -35,39 +35,29 @@
   --color-danger-light: #fee2e2;
 
   /* --- Typography --- */
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", "Noto Sans Devanagari", "Noto Sans Gujarati", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Fira Code", monospace;
 
-  /* Inter type scale (Major Third 1.250) */
+  /* Inter type scale (16 / 20 / 25 / 31 px) */
   --text-body: 1rem;        /* 16px */
+  --text-body--line-height: 1.5;
   --text-h3: 1.25rem;       /* 20px */
+  --text-h3--line-height: 1.4;
+  --text-h3--letter-spacing: -0.02em;
   --text-h2: 1.5625rem;     /* 25px */
+  --text-h2--line-height: 1.28;
+  --text-h2--letter-spacing: -0.02em;
   --text-h1: 1.9375rem;     /* 31px */
+  --text-h1--line-height: 1.23;
+  --text-h1--letter-spacing: -0.02em;
 
-  /* Line heights */
-  --leading-body: 1.5;
-  --leading-h3: 1.4;
-  --leading-h2: 1.28;
-  --leading-h1: 1.23;
-
-  /* Letter spacing for headings */
-  --tracking-tight: -0.02em;
-
-  /* --- 8px Spatial Grid --- */
-  --spacing-1: 8px;
-  --spacing-2: 16px;
-  --spacing-3: 24px;
-  --spacing-4: 32px;
-  --spacing-6: 48px;
-  --spacing-8: 64px;
-
-  /* --- Radius --- */
-  --radius-card: 16px;   /* rounded-xl */
-  --radius-btn: 8px;     /* rounded-lg */
+  /* --- Radius (8px grid) --- */
+  --radius-lg: 8px;         /* rounded-lg = 8px (Tailwind default) */
+  --radius-xl: 16px;        /* rounded-xl = 16px per spec */
 }
 
 /* ============================================================
-   Global Reset & Base Styles
+   Global Base Styles
    ============================================================ */
 
 *, *::before, *::after {
@@ -83,15 +73,15 @@ html {
 body {
   background-color: #f8fafc;
   color: #0f172a;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   font-size: 1rem;
   line-height: 1.5;
   font-weight: 400;
 }
 
-/* --- Typography Scale --- */
+/* --- Typographic Scale --- */
 h1 {
-  font-size: 1.9375rem;
+  font-size: 1.9375rem; /* 31px */
   font-weight: 700;
   line-height: 1.23;
   letter-spacing: -0.02em;
@@ -99,7 +89,7 @@ h1 {
 }
 
 h2 {
-  font-size: 1.5625rem;
+  font-size: 1.5625rem; /* 25px */
   font-weight: 700;
   line-height: 1.28;
   letter-spacing: -0.02em;
@@ -107,7 +97,7 @@ h2 {
 }
 
 h3 {
-  font-size: 1.25rem;
+  font-size: 1.25rem; /* 20px */
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: -0.02em;
@@ -115,12 +105,12 @@ h3 {
 }
 
 p {
-  font-size: 1rem;
+  font-size: 1rem; /* 16px */
   line-height: 1.5;
   color: #334155;
 }
 
-/* --- Focus Ring (Accessibility — WCAG 2.1 AA) --- */
+/* --- Focus Ring (Accessibility — WCAG 2.1 AA, Electric Royal Blue) --- */
 :focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
@@ -143,13 +133,15 @@ p {
   background: #94a3b8;
 }
 
-/* --- Card Elevation Utility --- */
+/* --- Elevated Card Utility: white surface + hairline border + soft shadow --- */
 .card {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  box-shadow:
+    0 1px 3px 0 rgba(15, 23, 42, 0.06),
+    0 1px 2px -1px rgba(15, 23, 42, 0.04);
 }
 
 .card-sm {
@@ -160,11 +152,11 @@ p {
   box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
 }
 
-/* --- Primary Button Utility --- */
+/* --- Primary Button Utility (10% Accent CTA) --- */
 .btn-primary {
   background-color: #2563eb;
   color: #ffffff;
-  font-weight: 500;
+  font-weight: 600;
   padding: 8px 16px;
   border-radius: 8px;
   border: none;
@@ -189,7 +181,7 @@ p {
 }
 
 .btn-secondary {
-  background-color: #f1f5f9;
+  background-color: #ffffff;
   color: #0f172a;
   font-weight: 500;
   padding: 8px 16px;
@@ -203,5 +195,5 @@ p {
   font-size: 0.875rem;
 }
 .btn-secondary:hover {
-  background-color: #e2e8f0;
+  background-color: #f1f5f9;
 }

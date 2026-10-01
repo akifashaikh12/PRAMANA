@@ -4,10 +4,6 @@ import React, { useState, useMemo } from "react";
 import {
   Clock,
   MapPin,
-  ShieldAlert,
-  FileText,
-  Database,
-  Calendar,
   Layers,
   GitBranch,
 } from "lucide-react";
@@ -21,6 +17,15 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ExtractedClaim, Evidence, Finding } from "@/agent/schemas";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/locales/i18n-context";
+import { useDynamicTranslations } from "@/locales/dynamic-translation";
+import { useTranslatedPayload } from "@/locales/translated-payload";
+import {
+  EVIDENCE_KIND_LABEL_KEYS,
+  FINDING_TYPE_LABEL_KEYS,
+  BCP47_LOCALES,
+} from "@/locales/translations";
+import type { TranslationKey } from "@/locales/translations";
 
 interface TimelineProps {
   claims: ExtractedClaim[];
@@ -40,86 +45,146 @@ interface TimelineItem {
   color: string;
 }
 
+type FilterTab = "all" | "claim" | "evidence" | "finding";
+
 export function Timeline({ claims, evidenceList, findings }: TimelineProps) {
+  const { t, lang } = useI18n();
   const [viewMode, setViewMode] = useState<"list" | "graph">("list");
-  const [filter, setFilter] = useState<"all" | "claim" | "evidence" | "finding">("all");
+  const [filter, setFilter] = useState<FilterTab>("all");
+
+  const filterLabels: Record<FilterTab, TranslationKey> = {
+    all: "filter_all",
+    claim: "filter_claims",
+    evidence: "filter_evidence",
+    finding: "filter_findings",
+  };
+
+  // Display-only translations of stored content (originals stay verbatim — audit chain safe)
+  const dynamicTexts = useMemo(
+    () => [
+      ...claims.flatMap((c) => [
+        c.what,
+        ...(c.who ? [c.who] : []),
+        ...(c.place ? [c.place] : []),
+      ]),
+      ...evidenceList.flatMap((e) => [
+        e.description,
+        e.source,
+        ...(e.place ? [e.place] : []),
+      ]),
+      ...findings.map((f) => f.explanation),
+    ],
+    [claims, evidenceList, findings]
+  );
+  const { translations } = useDynamicTranslations(dynamicTexts);
+
+  // Knowledge-graph translation: node labels + localized edge relationship
+  // tags ("contradicts", "corroborates", "occurs before") in one request.
+  const graphPayload = useMemo(
+    () => ({
+      nodes: [
+        ...claims.map((c, i) => ({ id: `c-${i}`, label: c.what })),
+        ...evidenceList.map((e, i) => ({ id: `e-${i}`, label: e.description })),
+        ...findings.map((f, i) => ({ id: `f-${i}`, label: f.explanation })),
+      ],
+    }),
+    [claims, evidenceList, findings]
+  );
+  const { data: translatedGraph } = useTranslatedPayload(graphPayload, lang);
+
+  // Sentinel sorts unanchored claims first and findings last (pure, no Date.now())
+  const FINDINGS_SENTINEL_MS = 8_640_000_000_000_000;
 
   // Compile and sort timeline items
   const items: TimelineItem[] = useMemo(() => {
     const list: TimelineItem[] = [];
 
-    // Add claims
-    claims.forEach((c) => {
-      const time = c.time_start || c.time_expression || new Date().toISOString();
-      const ms = new Date(time).getTime();
+    claims.forEach((c, idx) => {
+      const time = c.time_start || c.time_expression || "\u2014";
+      const ms = c.time_start ? new Date(c.time_start).getTime() : NaN;
       list.push({
-        id: c.id || `cl-${Math.random()}`,
+        id: c.id || `cl-${idx}`,
         type: "claim",
-        title: c.what,
-        subtitle: c.who ? `Claimed by: ${c.who}` : undefined,
+        title: translations[c.what] ?? c.what,
+        subtitle: c.who
+          ? `${t("claimed_by")}: ${translations[c.who] ?? c.who}`
+          : undefined,
         place: c.place,
         timestamp: time,
-        timeMs: isNaN(ms) ? Date.now() : ms,
-        badge: "Claim",
-        color: "border-blue-500/50 bg-blue-500/10 text-blue-400",
+        timeMs: isNaN(ms) ? 0 : ms,
+        badge: t("badge_claim"),
+        color: "border-accent/30 bg-accent-muted text-accent",
       });
     });
 
-    // Add evidence
     evidenceList.forEach((e) => {
       const ms = new Date(e.timestamp).getTime();
+      const kindKey = EVIDENCE_KIND_LABEL_KEYS[e.kind];
       list.push({
         id: e.id,
         type: "evidence",
-        title: e.description,
-        subtitle: `Source: ${e.source}`,
+        title: translations[e.description] ?? e.description,
+        subtitle: `${t("source_label")}: ${translations[e.source] ?? e.source}`,
         place: e.place,
         timestamp: e.timestamp,
-        timeMs: isNaN(ms) ? Date.now() : ms,
-        badge: e.kind.replace("_", " "),
-        color: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
+        timeMs: isNaN(ms) ? 0 : ms,
+        badge: kindKey ? t(kindKey) : e.kind.replace("_", " "),
+        color: "border-success/30 bg-success-light text-success",
       });
     });
 
-    // Add findings
-    findings.forEach((f) => {
+    findings.forEach((f, idx) => {
+      const typeKey = FINDING_TYPE_LABEL_KEYS[f.type];
+      const typeText = typeKey ? t(typeKey) : f.type.replace("_", " ");
       list.push({
-        id: f.id || `f-${Math.random()}`,
+        id: f.id || `f-${idx}`,
         type: "finding",
-        title: f.explanation,
-        subtitle: `Type: ${f.type.replace("_", " ")}`,
+        title: translations[f.explanation] ?? f.explanation,
+        subtitle: `${t("type_label")}: ${typeText}`,
         place: null,
-        timestamp: "Flagged Anomaly",
-        timeMs: Date.now() + 1000,
-        badge: f.type.replace("_", " "),
-        color: "border-rose-500/50 bg-rose-500/10 text-rose-400",
+        timestamp: t("flagged_anomaly"),
+        timeMs: FINDINGS_SENTINEL_MS,
+        badge: typeText,
+        color: "border-danger/30 bg-danger-light text-danger",
       });
     });
 
     return list.sort((a, b) => a.timeMs - b.timeMs);
-  }, [claims, evidenceList, findings]);
+  }, [claims, evidenceList, findings, t, translations]);
 
   const filteredItems = items.filter((i) =>
     filter === "all" ? true : i.type === filter
   );
 
-  // Generate React Flow graph nodes & edges
+  // Generate React Flow graph nodes & edges — labels come from the translated
+  // graph payload (display-only; underlying data untouched for hashing).
   const { graphNodes, graphEdges } = useMemo(() => {
+    const EDGE_TAG_KEYS = {
+      contradicts: "edge_contradicts" as const,
+      corroborates: "edge_corroborates" as const,
+      occurs_before: "edge_occurs_before" as const,
+    };
     const nodes: Node[] = [];
     const edges: Edge[] = [];
+
+    const claimLabel = (idx: number, fallback: string) =>
+      translatedGraph?.nodes?.find((n) => n?.id === `c-${idx}`)?.label ?? fallback;
+    const evidenceLabel = (idx: number, fallback: string) =>
+      translatedGraph?.nodes?.find((n) => n?.id === `e-${idx}`)?.label ?? fallback;
 
     let yOffset = 20;
 
     claims.forEach((c, idx) => {
       const nodeId = `node-c-${c.id || idx}`;
+      const label = claimLabel(idx, c.what);
       nodes.push({
         id: nodeId,
         position: { x: 40, y: yOffset },
-        data: { label: `Claim: ${c.what.slice(0, 32)}...` },
+        data: { label: `${t("graph_claim_prefix")}: ${label.slice(0, 32)}...` },
         style: {
-          background: "#0f172a",
-          color: "#93c5fd",
-          border: "1px solid #3b82f6",
+          background: "#eff6ff",
+          color: "#1d4ed8",
+          border: "1px solid #93c5fd",
           borderRadius: "8px",
           padding: "8px",
           fontSize: "11px",
@@ -132,14 +197,15 @@ export function Timeline({ claims, evidenceList, findings }: TimelineProps) {
     let evYOffset = 20;
     evidenceList.forEach((ev, idx) => {
       const evNodeId = `node-ev-${ev.id || idx}`;
+      const label = evidenceLabel(idx, ev.source);
       nodes.push({
         id: evNodeId,
         position: { x: 340, y: evYOffset },
-        data: { label: `Evidence: ${ev.source}` },
+        data: { label: `${t("graph_evidence_prefix")}: ${label}` },
         style: {
-          background: "#022c22",
-          color: "#6ee7b7",
-          border: "1px solid #10b981",
+          background: "#dcfce7",
+          color: "#15803d",
+          border: "1px solid #86efac",
           borderRadius: "8px",
           padding: "8px",
           fontSize: "11px",
@@ -147,76 +213,79 @@ export function Timeline({ claims, evidenceList, findings }: TimelineProps) {
         },
       });
 
-      // Link first claim to related evidence for visual correlation
       if (claims[0]) {
         edges.push({
           id: `edge-${idx}`,
           source: `node-c-${claims[0].id || 0}`,
           target: evNodeId,
           animated: true,
-          style: { stroke: "#f59e0b", strokeWidth: 1.5 },
+          label: findings.length > 0 ? t(EDGE_TAG_KEYS.contradicts) : t(EDGE_TAG_KEYS.corroborates),
+          labelShowBg: true,
+          labelBgPadding: [4, 2],
+          labelStyle: { fontSize: 10, fill: "#64748b" },
+          style: { stroke: "#2563eb", strokeWidth: 1.5 },
         });
       }
       evYOffset += 75;
     });
 
     return { graphNodes: nodes, graphEdges: edges };
-  }, [claims, evidenceList]);
+  }, [claims, evidenceList, findings, t, translatedGraph]);
 
   return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md flex flex-col h-full max-h-[720px]">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex flex-col h-full max-h-[720px]">
       {/* Top Header & View Controls */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-2">
         <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-amber-400" />
-          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-            Chronology & Graph
+          <Clock className="w-4 h-4 text-accent" />
+          <h3 className="text-xs font-bold text-ink uppercase tracking-wide">
+            {t("timeline_title")}
           </h3>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
           <button
             onClick={() => setViewMode("list")}
             className={cn(
-              "px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors",
+              "px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer",
               viewMode === "list"
-                ? "bg-slate-800 text-slate-200"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-white text-accent shadow-sm"
+                : "text-muted hover:text-ink"
             )}
           >
             <Layers className="w-3 h-3" />
-            <span>List</span>
+            <span>{t("list_view")}</span>
           </button>
           <button
             onClick={() => setViewMode("graph")}
             className={cn(
-              "px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors",
+              "px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer",
               viewMode === "graph"
-                ? "bg-slate-800 text-slate-200"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-white text-accent shadow-sm"
+                : "text-muted hover:text-ink"
             )}
           >
             <GitBranch className="w-3 h-3" />
-            <span>Graph</span>
+            <span>{t("graph_view")}</span>
           </button>
         </div>
       </div>
 
       {/* Filter Tabs (in list mode) */}
       {viewMode === "list" && (
-        <div className="flex items-center gap-1 py-2 text-[10px] border-b border-slate-800/60 overflow-x-auto">
-          {(["all", "claim", "evidence", "finding"] as const).map((tab) => (
+        <div className="flex items-center gap-1 py-2 text-xs border-b border-slate-200 overflow-x-auto">
+          {(Object.keys(filterLabels) as FilterTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setFilter(tab)}
               className={cn(
-                "px-2 py-0.5 rounded capitalize transition-colors cursor-pointer",
+                "px-2 py-1 rounded-lg transition-colors cursor-pointer",
                 filter === tab
-                  ? "bg-slate-800 text-amber-300 font-semibold border border-slate-700"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-accent-muted text-accent font-semibold border border-accent-light"
+                  : "text-muted hover:text-ink border border-transparent"
               )}
             >
-              {tab}
+              {t(filterLabels[tab])}
             </button>
           ))}
         </div>
@@ -226,59 +295,60 @@ export function Timeline({ claims, evidenceList, findings }: TimelineProps) {
       <div className="flex-1 overflow-y-auto mt-2 pr-1">
         {viewMode === "list" ? (
           filteredItems.length === 0 ? (
-            <div className="text-center py-10 text-xs text-slate-500">
-              No timeline events recorded yet.
+            <div className="text-center py-8 text-sm text-muted">
+              {t("no_timeline")}
             </div>
           ) : (
-            <div className="relative pl-4 space-y-4 before:content-[''] before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-[1px] before:bg-slate-800">
+            <div className="relative pl-4 space-y-4 before:content-[''] before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-200">
               {filteredItems.map((item) => (
                 <div key={item.id} className="relative group">
                   {/* Timeline dot */}
                   <div
                     className={cn(
-                      "absolute -left-[14px] top-1.5 w-2 h-2 rounded-full border bg-slate-950",
+                      "absolute -left-[14px] top-2 w-2 h-2 rounded-full border bg-white",
                       item.type === "finding"
-                        ? "border-rose-400 bg-rose-500 animate-ping"
+                        ? "border-danger bg-danger"
                         : item.type === "evidence"
-                        ? "border-emerald-400 bg-emerald-400"
-                        : "border-blue-400 bg-blue-400"
+                        ? "border-success bg-success"
+                        : "border-accent bg-accent"
                     )}
                   />
-                  <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-slate-700 transition-all text-xs space-y-1">
+                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all text-sm space-y-1">
                     <div className="flex items-center justify-between gap-1">
                       <span
                         className={cn(
-                          "text-[9px] uppercase font-mono px-1.5 py-0.2 rounded font-bold border",
+                          "text-[10px] uppercase font-mono px-1.5 py-0.5 rounded font-bold border",
                           item.color
                         )}
                       >
                         {item.badge}
                       </span>
-                      <span className="text-[10px] text-slate-500 font-mono">
+                      <span className="text-xs text-muted font-mono">
                         {item.timestamp.includes("T")
-                          ? new Date(item.timestamp).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                          ? new Date(item.timestamp).toLocaleTimeString(
+                              BCP47_LOCALES[lang],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )
                           : item.timestamp}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-200 font-medium leading-snug">
+                    <p className="text-sm text-ink font-medium leading-snug line-clamp-2">
                       {item.title}
                     </p>
 
                     {item.place && (
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <MapPin className="w-2.5 h-2.5 text-slate-500" />
-                        <span>{item.place}</span>
+                      <div className="flex items-center gap-1 text-xs text-muted">
+                        <MapPin className="w-3 h-3" />
+                        <span>{translations[item.place] ?? item.place}</span>
                       </div>
                     )}
 
                     {item.subtitle && (
-                      <div className="text-[10px] text-slate-500 italic">
-                        {item.subtitle}
-                      </div>
+                      <div className="text-xs text-muted italic">{item.subtitle}</div>
                     )}
                   </div>
                 </div>
@@ -287,14 +357,14 @@ export function Timeline({ claims, evidenceList, findings }: TimelineProps) {
           )
         ) : (
           /* React Flow Graph View */
-          <div className="h-96 w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+          <div className="h-96 w-full rounded-lg overflow-hidden border border-slate-200 bg-canvas">
             <ReactFlow
               nodes={graphNodes}
               edges={graphEdges}
               fitView
-              colorMode="dark"
+              colorMode="light"
             >
-              <Background color="#1e293b" gap={16} />
+              <Background color="#e2e8f0" gap={16} />
               <Controls />
             </ReactFlow>
           </div>

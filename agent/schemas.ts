@@ -100,3 +100,29 @@ export const CaseRecordSchema = z.object({
 });
 
 export type CaseRecord = z.infer<typeof CaseRecordSchema>;
+
+/** Full case metadata: id, title, mode, created_at, updated_at, version. */
+export const CaseMetaSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  mode: z.enum(["diary", "investigation", "hiring"]),
+  created_at: z.string(),
+  updated_at: z.string(),
+  version: z.number().int().nonnegative(),
+});
+
+export type CaseMeta = z.infer<typeof CaseMetaSchema>;
+
+/** One immutable, hash-chained audit entry for a case. */
+export const CaseAuditLogSchema = z.object({
+  id: z.string().optional(),
+  case_id: z.string().nullable().optional(),
+  action_type: z.string(),
+  changed_by: z.string().default("system_user"),
+  previous_state: z.unknown().nullable().optional(),
+  new_state: z.unknown().nullable().optional(),
+  timestamp: z.string(),
+  sha256_hash: z.string(),
+});
+
+export type CaseAuditLog = z.infer<typeof CaseAuditLogSchema>;
