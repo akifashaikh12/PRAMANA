@@ -9,11 +9,6 @@ import diaryConfig from "@/modes/diary.json";
 
 export const dynamic = "force-dynamic";
 
-// ---------------------------------------------------------------------------
-// CORS — allows external automated evaluation scripts (judges) to call this
-// endpoint cleanly from any origin.
-// ---------------------------------------------------------------------------
-
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -152,7 +147,3 @@ export async function POST(req: NextRequest) {
     return withCors(jsonError(message, 500));
   }
 }
-
-
-Freebuff 0.0.155 installs when idle
-Waiting for 1 session to end at 7:33 PM.
