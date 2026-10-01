@@ -205,6 +205,5 @@ PRAMANA includes an integrated voice assistant powered by **Groq Whisper Large v
   - Sends recording payload to `/api/transcribe`.
   - Transcribed text is automatically appended to the statement textarea for immediate claim extraction and verification.
 - **Audio Feedback**: Live pulsing recording timer, animated audio waveform, and instant error handling.
-
 ---
 
